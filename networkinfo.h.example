@@ -1,0 +1,11 @@
+#ifndef NETWORKINFO_H
+#define NETWORKINFO_H
+
+static wifi_nets_t networks[] = 
+{
+    { "ssidA", "passwordA" },
+    { "ssidB", "passwordB" },
+    { "", ""}
+};
+
+#endif
