@@ -131,7 +131,8 @@ void setup()
     Serial.print("Boot Vers: "); Serial.println(system_get_boot_version());
     Serial.print("CPU: "); Serial.println(system_get_cpu_freq());
     
-    Wire.pins(0, 2); //on ESP-01.
+    //Wire.pins(2, 14); // esp12e
+    Wire.pins(0, 2); // esp-01
     Wire.begin();
     StartUp_OLED(); // Init Oled and fire up!
     Serial.println("OLED Init...");
