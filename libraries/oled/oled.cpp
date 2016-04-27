@@ -116,7 +116,7 @@ void sendStr(unsigned char *string)
 
 // Prints a string in coordinates X Y, being multiples of 8.
 // This means we have 16 COLS (0-15) and 8 ROWS (0-7).
-void sendStrXY( char *string, int X, int Y)
+void sendStrXY(const char *string, int X, int Y)
 {
   setXY(X,Y);
   unsigned char i=0;
@@ -134,8 +134,8 @@ void sendStrXY( char *string, int X, int Y)
 // Inits oled and draws logo at startup
 void init_OLED(void)
 {
-  sendcommand(0xae);                //display off
-  sendcommand(0xa6);                //Set Normal Display (default)
+    sendcommand(0xae);              //display off
+    sendcommand(0xa6);              //Set Normal Display (default)
     sendcommand(0xAE);              //DISPLAYOFF
     sendcommand(0xD5);              //SETDISPLAYCLOCKDIV
     sendcommand(0x80);              // the suggested ratio 0x80

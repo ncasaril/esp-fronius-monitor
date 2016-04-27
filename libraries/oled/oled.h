@@ -20,7 +20,7 @@ void sendcommand(unsigned char com);
 void setXY(unsigned char row,unsigned char col);
 void clear_display(void);
 void sendStr(unsigned char *string);
-void sendStrXY( char *string, int X, int Y);
+void sendStrXY(const char *string, int X, int Y);
 void init_OLED(void);
 void Draw_WIFI();
 void Draw_WAVES();
