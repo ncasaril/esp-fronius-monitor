@@ -113,10 +113,12 @@ void setup()
     Serial.print("Heap: "); Serial.println(system_get_free_heap_size());
     Serial.print("Boot Vers: "); Serial.println(system_get_boot_version());
     Serial.print("CPU: "); Serial.println(system_get_cpu_freq());
+#if defined(ARDUINO_ESP8266_ESP12E)    
+    Wire.begin(2, 14); //on ESP12E.
+#else
+    Wire.begin(0, 2); //on ESP-01.
+#endif
     
-    //Wire.pins(0, 2); //on ESP-01.
-    Wire.pins(2, 14); //on ESP12E.
-    Wire.begin();
     StartUp_OLED(); // Init Oled and fire up!
     Serial.println("OLED Init...");
     clear_display();
