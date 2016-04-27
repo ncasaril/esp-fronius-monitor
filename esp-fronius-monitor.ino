@@ -13,26 +13,9 @@
 #include <ArduinoJson.h>
 
 extern "C" {
+#include <oled.h>
 #include "user_interface.h"
 }
-
-typedef struct{
-    float g;
-    float l;
-} solargraph_t;
-
-void StartUp_OLED();
-static void init_OLED(void);
-static void clear_display(void);
-static void clear_display_row(unsigned char k);
-void displayOff(void);
-void displayOn(void);
-static void sendcommand(unsigned char com);
-static void setXY(unsigned char row,unsigned char col);
-static void SendChar(unsigned char data);
-static void sendCharXY(unsigned char data, int X, int Y);
-static void sendStrXY( char *string, int X, int Y);
-void Draw_Plot(solargraph_t *slog, int fi, int maxn);
 
 typedef struct {
     String ssid;
@@ -131,7 +114,8 @@ void setup()
     Serial.print("Boot Vers: "); Serial.println(system_get_boot_version());
     Serial.print("CPU: "); Serial.println(system_get_cpu_freq());
     
-    Wire.pins(0, 2); //on ESP-01.
+    //Wire.pins(0, 2); //on ESP-01.
+    Wire.pins(2, 14); //on ESP12E.
     Wire.begin();
     StartUp_OLED(); // Init Oled and fire up!
     Serial.println("OLED Init...");
@@ -145,7 +129,7 @@ void setup()
     int i=0;
     while (WiFi.status() != WL_CONNECTED)
     {
-        Serial.print("Connecting to ");
+        Serial.print("Connecting to:");
         Serial.println(networks[i].ssid.c_str());
 
         WiFi.begin(networks[i].ssid.c_str(), networks[i].pass.c_str());

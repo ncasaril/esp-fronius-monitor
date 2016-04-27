@@ -1,23 +1,11 @@
+#include <Arduino.h>
+
 #include "font.h"
+#include "oled.h"
 #define OLED_address  0x3c  //OLED I2C bus address... even if OLED states 0x78 !!!
 
-static void reset_display(void)
-{
-  displayOff();
-  clear_display();
-  displayOn();
-}
+#include <Wire.h>
 
-
-void StartUp_OLED()
-{
-  init_OLED();
-  reset_display();
-  displayOff();
-  setXY(0,0);
-  clear_display();
-  displayOn();
-}
 
 
 void displayOn(void)
@@ -31,23 +19,15 @@ void displayOff(void)
   sendcommand(0xae);		//display off
 }
 
-
-static void clear_display(void)
+void reset_display(void)
 {
-  unsigned char i,k;
-  for(k=0;k<8;k++)
-  {	
-    setXY(k,0);    
-    {
-      for(i=0;i<128;i++)     //clear all COL
-      {
-        SendChar(0);         //clear all COL
-      }
-    }
-  }
+  displayOff();
+  clear_display();
+  displayOn();
 }
 
-static void clear_display_row(unsigned char k)
+
+void clear_display_row(unsigned char k)
 {
   unsigned char i;
   setXY(k,0);    
@@ -62,7 +42,7 @@ static void clear_display_row(unsigned char k)
 
 
 // Actually this sends a byte, not a char to draw in the display. 
-static void SendChar(unsigned char data) 
+void SendChar(unsigned char data) 
 {
   Wire.beginTransmission(OLED_address);  // begin transmitting
   Wire.write(0x40);                      //data mode
@@ -72,7 +52,7 @@ static void SendChar(unsigned char data)
 
 
 // Prints a display char (not just a byte) in coordinates X Y,
-static void sendCharXY(unsigned char data, int X, int Y)
+void sendCharXY(unsigned char data, int X, int Y)
 {
   //if (interrupt && !doing_menu) return; // Stop printing only if interrupt is call but not in button functions
   setXY(X, Y);
@@ -86,7 +66,7 @@ static void sendCharXY(unsigned char data, int X, int Y)
 }
 
 
-static void sendcommand(unsigned char com)
+void sendcommand(unsigned char com)
 {
   Wire.beginTransmission(OLED_address);     //begin transmitting
   Wire.write(0x80);                          //command mode
@@ -96,16 +76,31 @@ static void sendcommand(unsigned char com)
 
 
 // Set the cursor position in a 16 COL * 8 ROW map.
-static void setXY(unsigned char row,unsigned char col)
+void setXY(unsigned char row,unsigned char col)
 {
   sendcommand(0xb0+row);                //set page address
   sendcommand(0x00+(8*col&0x0f));       //set low col address
   sendcommand(0x10+((8*col>>4)&0x0f));  //set high col address
 }
 
+void clear_display(void)
+{
+  unsigned char i,k;
+  for(k=0;k<8;k++)
+  {	
+    setXY(k,0);    
+    {
+      for(i=0;i<128;i++)     //clear all COL
+      {
+        SendChar(0);         //clear all COL
+      }
+    }
+  }
+}
+
 
 // Prints a string regardless the cursor position.
-static void sendStr(unsigned char *string)
+void sendStr(unsigned char *string)
 {
   unsigned char i=0;
   while(*string)
@@ -121,7 +116,7 @@ static void sendStr(unsigned char *string)
 
 // Prints a string in coordinates X Y, being multiples of 8.
 // This means we have 16 COLS (0-15) and 8 ROWS (0-7).
-static void sendStrXY( char *string, int X, int Y)
+void sendStrXY( char *string, int X, int Y)
 {
   setXY(X,Y);
   unsigned char i=0;
@@ -137,7 +132,7 @@ static void sendStrXY( char *string, int X, int Y)
 
 
 // Inits oled and draws logo at startup
-static void init_OLED(void)
+void init_OLED(void)
 {
   sendcommand(0xae);                //display off
   sendcommand(0xa6);                //Set Normal Display (default)
@@ -264,6 +259,16 @@ void Draw_Plot(solargraph_t *slog, int fi, int maxn)
   }
   sendcommand(0xaf);    //display on
   
+}
+
+void StartUp_OLED()
+{
+  init_OLED();
+  reset_display();
+  displayOff();
+  setXY(0,0);
+  clear_display();
+  displayOn();
 }
 
 
