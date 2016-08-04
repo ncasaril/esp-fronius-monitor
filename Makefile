@@ -22,13 +22,16 @@ SKETCH ?= ./esp-fronius-monitor.ino
 #ADDITIONAL_INOS ?= ./OLED_Functs.ino
 LIBS ?= $(ESP_LIBS)/Wire \
         $(ESP_LIBS)/ESP8266WiFi \
-	    $(ESP_LIBS)/ArduinoJson \
+	    libraries/ArduinoJson \
 	    libraries/oled
 
 # Esp8266 Arduino git location
 ESP_ROOT ?= $(HOME)/git/esp8266Arduino
 # Output directory
 BUILD_ROOT ?= /tmp/$(MAIN_NAME)
+
+# Which variant to use from $(ESP_ROOT)/variants/
+INCLUDE_VARIANT ?= generic
 
 # Board definitions
 FLASH_SIZE ?= 4M
@@ -41,6 +44,17 @@ UPLOAD_SPEED ?= 230400
 UPLOAD_PORT ?= /dev/ttyUSB.miniadapter
 UPLOAD_VERB ?= -v
 UPLOAD_RESET ?= ck
+
+# OTA parameters
+ESP_ADDR ?= ESP_DA6ABC
+ESP_PORT ?= 8266
+ESP_PWD ?= 123
+
+# HTTP update parameters
+HTTP_ADDR ?= ESP_DA6ABC
+HTTP_URI ?= /update
+HTTP_PWD ?= user
+HTTP_USR ?= password
 
 #====================================================================================
 # The area below should normally not need to be edited
@@ -73,15 +87,22 @@ CPP = $(TOOLS_BIN)/xtensa-lx106-elf-g++
 LD =  $(CC)
 AR = $(TOOLS_BIN)/xtensa-lx106-elf-ar
 ESP_TOOL = $(TOOLS_ROOT)/esptool/esptool
+OTA_TOOL = $(TOOLS_ROOT)/espota.py
+HTTP_TOOL = curl
 
-INCLUDE_DIRS += $(SDK_ROOT)/include $(SDK_ROOT)/lwip/include $(CORE_DIR) $(ESP_ROOT)/variants/generic $(OBJ_DIR)
+INCLUDE_DIRS += $(SDK_ROOT)/include $(SDK_ROOT)/lwip/include $(CORE_DIR) $(ESP_ROOT)/variants/$(INCLUDE_VARIANT) $(OBJ_DIR)
 C_DEFINES = -D__ets__ -DICACHE_FLASH -U__STRICT_ANSI__ -DF_CPU=80000000L -DARDUINO=10605 -DARDUINO_ESP8266_ESP12E -DARDUINO_ARCH_ESP8266 -DESP8266
-C_INCLUDES = $(foreach dir,$(INCLUDE_DIRS) $(USER_DIRS),-I$(dir))
+C_INCLUDES = $(foreach dir,$(INCLUDE_DIRS) $(USER_INC_DIRS),-I$(dir))
 C_FLAGS ?= -c -Os -g -Wpointer-arith -Wno-implicit-function-declaration -Wl,-EL -fno-inline-functions -nostdlib -mlongcalls -mtext-section-literals -falign-functions=4 -MMD -std=gnu99 -ffunction-sections -fdata-sections
 CPP_FLAGS ?= -c -Os -g -mlongcalls -mtext-section-literals -fno-exceptions -fno-rtti -falign-functions=4 -std=c++11 -MMD -ffunction-sections -fdata-sections
 S_FLAGS ?= -c -g -x assembler-with-cpp -MMD
 LD_FLAGS ?= -g -w -Os -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static -L$(SDK_ROOT)/lib -L$(SDK_ROOT)/ld -T$(FLASH_LAYOUT) -Wl,--gc-sections -Wl,-wrap,system_restart_local -Wl,-wrap,register_chipv6_phy
 LD_STD_LIBS ?= -lm -lgcc -lhal -lphy -lnet80211 -llwip -lwpa -lmain -lpp -lsmartconfig -lwps -lcrypto -laxtls
+# stdc++ used in later versions of esp8266 Arduino
+LD_STD_CPP = lstdc++
+ifneq ($(shell grep $(LD_STD_CPP) $(ESP_ROOT)/platform.txt),)
+	LD_STD_LIBS += -$(LD_STD_CPP)
+endif
 
 # Core source files
 CORE_DIR = $(ESP_ROOT)/cores/esp8266
@@ -90,10 +111,12 @@ CORE_OBJ = $(patsubst %,$(OBJ_DIR)/%$(OBJ_EXT),$(notdir $(CORE_SRC)))
 CORE_LIB = $(OBJ_DIR)/core.ar
 
 # User defined compilation units
+USER_INC = $(SKETCH) $(shell find $(LIBS) -name "*.h")
 USER_SRC = $(SKETCH) $(shell find $(LIBS) -name "*.S" -o -name "*.c" -o -name "*.cpp")
 # Object file suffix seems to be significant for the linker...
 USER_OBJ = $(subst .ino,.cpp,$(patsubst %,$(OBJ_DIR)/%$(OBJ_EXT),$(notdir $(USER_SRC))))
 USER_DIRS = $(sort $(dir $(USER_SRC)))
+USER_INC_DIRS = $(sort $(dir $(USER_INC)))
 
 VPATH += $(shell find $(CORE_DIR) -type d) $(USER_DIRS)
 
@@ -156,6 +179,13 @@ $(MAIN_EXE): $(CORE_LIB) $(USER_OBJ)
 
 upload: all
 	$(ESP_TOOL) $(UPLOAD_VERB) -cd $(UPLOAD_RESET) -cb $(UPLOAD_SPEED) -cp $(UPLOAD_PORT) -ca 0x00000 -cf $(MAIN_EXE)
+
+ota: all
+	$(OTA_TOOL) -i $(ESP_ADDR) -p $(ESP_PORT) -a $(ESP_PWD) -f $(MAIN_EXE)
+
+http: all
+	$(HTTP_TOOL) --verbose -F image=@$(MAIN_EXE) --user $(HTTP_USR):$(HTTP_PWD)  http://$(HTTP_ADDR)$(HTTP_URI)
+	echo "\n"
 
 clean:
 	echo Removing all intermediate build files...
